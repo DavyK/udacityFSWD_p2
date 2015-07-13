@@ -288,13 +288,16 @@ def swissPairings(tournament):
                     WHERE id NOT IN
                     (
                         SELECT DISTINCT * FROM
-                        (SELECT player2_id FROM matches WHERE player1_id = %s AND tournament_id = %s
-                        UNION
-                        SELECT player1_id FROM matches WHERE player2_id = %s  AND tournament_id = %s) AS Q1
+                        (
+                            SELECT player2_id FROM matches WHERE player1_id = %s AND tournament_id = %s
+                            UNION
+                            SELECT player1_id FROM matches WHERE player2_id = %s  AND tournament_id = %s
+                        ) AS Q1
                     ) AND id != %s
                     """
             c.execute(query, (player[0], tournament, player[0], tournament, player[0]))
 
+            # intersection off opponents not yet played against and opponents not yet assigned to a match
             eligible_opponents = set([r[0] for r in c.fetchall()]).intersection(set(player_pool))
 
             for o in standings:
