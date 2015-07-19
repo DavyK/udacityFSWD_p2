@@ -9,9 +9,9 @@ import math
 import random
 
 
-def connect():
+def connect(dbname="tournaments"):
     """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournaments")
+    return psycopg2.connect("dbname=%s" % dbname)
 
 
 def deleteMatches():
@@ -40,11 +40,12 @@ def deleteTournaments():
     db.commit()
     db.close()
 
-def deleteResults():
-    """Remove all records from the player_tournament_results table"""
+
+def deleteEntrants():
+    """Remove all the tournament records from the database."""
     db = connect()
     c = db.cursor()
-    c.execute('DELETE FROM player_tournament_results')
+    c.execute('DELETE FROM players_in_tournaments')
     db.commit()
     db.close()
 
@@ -53,12 +54,10 @@ def countPlayers(tournament=None):
     """Returns the number of players currently registered."""
     db = connect()
     c = db.cursor()
-    if tournament is not None:
-        c.execute('SELECT count(player_id) from player_tournament_results WHERE tournament_id = %s', (tournament, ))
-    else:
-        c.execute('SELECT count(*) from players')
+    c.execute('SELECT count(*) from players')
     result = c.fetchone()
     db.close()
+
     return result[0]
 
 
@@ -69,7 +68,9 @@ def countTournaments():
     c.execute('SELECT count(*) from tournaments')
     result = c.fetchone()
     db.close()
+
     return result[0]
+
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -80,14 +81,16 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-
     db = connect()
     c = db.cursor()
-    query = "INSERT INTO players (name) values (%s)"
+    query = "INSERT INTO players (name) values (%s) RETURNING id"
     data = (name, )
     c.execute(query, data)
+    new_player_id = c.fetchone()[0]
     db.commit()
-    db.close
+    db.close()
+    return new_player_id
+
 
 def registerTournament(name):
     """Adds a tournament to the tournament database.
@@ -111,38 +114,30 @@ def registerTournament(name):
     c.execute(query, data)
     new_tournament_id = c.fetchone()[0]
     db.commit()
-    db.close
+    db.close()
 
     return new_tournament_id
 
 
 def addPlayerToTournament(player, tournament):
-    """Inserts record for player and tournament for keeping track of players scores across different tournaments.
-
-    Args:
-        player: id number of player to add.
-        tournament: id number of tournament to which the player will be added.
-    """
 
     db = connect()
     c = db.cursor()
-    query = """
-    INSERT INTO player_tournament_results
-    VALUES (%s, %s)
-    """
+    query = "INSERT INTO players_in_tournaments (player_id, tournament_id) values (%s, %s)"
     data = (player, tournament)
     c.execute(query, data)
     db.commit()
     db.close()
 
-def playerStandings(tournament=None):
+
+def playerStandings(tournament):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
     tied for first place if there is currently a tie.
 
     Args:
-        id number of tournament. If None, standings are computed from all matches players have ever played.
+        id number of tournament.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -154,80 +149,36 @@ def playerStandings(tournament=None):
 
     db = connect()
     c = db.cursor()
-    if tournament is not None:
-        query = """
-        SELECT id, name, wins, matches, score FROM tournament_standings
-        WHERE tournament_id = %s
+    query = """
+        SELECT id, name, num_wins, num_matches FROM standings WHERE tournament_id = %s
         """
-        c.execute(query, (tournament,))
-
-    else:
-        query = """
-        SELECT id, name, wins, matches, score FROM tournament_standings
-        """
-        c.execute(query)
+    c.execute(query, (tournament, ))
     results = c.fetchall()
-
     db.close()
 
-    if len(results) % 2 == 0:
-        return results
-    else:
-        print "There are an odd number of players. Add another player please!"
-        sys.exit(1)
+    if len(results) % 2 != 0:
+        print """
+            Warning: There is an odd number of players. T
+            his is not supported, and may yield strange results.
+            Add another player please!
+            """
+    return results
 
 
-
-
-
-def reportMatch(player1, player2, tournament, draw=False):
+def reportMatch(winner, looser, tournament, draw=False):
     """Records the outcome of a single match between two players.
 
     Args:
-      player1:  the id number of the player who won if draw=False
-      player2:  the id number of the player who lost if draw=False
-      draw: default = False, if true then both players drew.
+      player1:  the id number of the player who won
+      player2:  the id number of the player who lost
     """
-
     db = connect()
     c = db.cursor()
-    query = "INSERT INTO matches VALUES (%s, %s, %s, %s)"
-    data = (tournament, player1, player2, draw)
-    c.execute(query, data)
-    db.commit()
-
-    if not draw:
-        query = """
-        SELECT wins
-        FROM
-        player_tournament_results
-        WHERE player_id = %s and tournament_id = %s
-        """
-        c.execute(query, (player2, tournament))
-        player2_wins = c.fetchone()[0]
-
-        query = """
-        UPDATE player_tournament_results
-        SET wins = wins + 1, score = score + %s
-        WHERE player_id = %s and tournament_id = %s
-        """
-        c.execute(query, (player2_wins, player1, tournament,))
-
-    else:
-        query = """
-        UPDATE player_tournament_results
-        SET wins = wins + 0.5
-        WHERE player_id IN (%s,%s) and tournament_id = %s
-        """
-        c.execute(query, (player1, player2, tournament,))
-
     query = """
-    UPDATE player_tournament_results
-    SET matches = matches + 1
-    WHERE player_id IN (%s,%s) and tournament_id = %s
+    INSERT INTO matches (tournament_id, winner_id, looser_id, draw) VALUES (%s, %s, %s, %s)
     """
-    c.execute(query, (player1, player2, tournament))
-
+    data = (tournament, winner, looser, draw)
+    c.execute(query, data)
     db.commit()
     db.close()
 
@@ -273,7 +224,7 @@ def swissPairings(tournament):
 
     for player in standings:
         if player[0] not in set(player_pool):
-            # just in case
+            # if this player has already been assigned to a match, skip over them.
             continue
 
         elif len(player_pool) == 2:
@@ -289,9 +240,9 @@ def swissPairings(tournament):
                     (
                         SELECT DISTINCT * FROM
                         (
-                            SELECT player2_id FROM matches WHERE player1_id = %s AND tournament_id = %s
+                            SELECT looser_id FROM matches WHERE winner_id = %s AND tournament_id = %s
                             UNION
-                            SELECT player1_id FROM matches WHERE player2_id = %s  AND tournament_id = %s
+                            SELECT winner_id FROM matches WHERE looser_id = %s  AND tournament_id = %s
                         ) AS Q1
                     ) AND id != %s
                     """
@@ -312,72 +263,6 @@ def swissPairings(tournament):
         sys.exit(1)
 
     return pairings
-
-def runTournament():
-
-    deleteMatches()
-    deleteResults()
-    deleteTournaments()
-    deletePlayers()
-
-    t = registerTournament('The Hunger Games')
-
-    registerPlayer("Girl 1")
-    registerPlayer("Boy 1")
-    registerPlayer("Girl 2")
-    registerPlayer("Boy 2")
-    registerPlayer("Girl 3")
-    registerPlayer("Boy 3")
-    registerPlayer("Girl 4")
-    registerPlayer("Boy 4")
-    registerPlayer("Girl 5")
-    registerPlayer("Boy 5")
-    registerPlayer("Girl 6")
-    registerPlayer("Boy 6")
-    registerPlayer("Girl 7")
-    registerPlayer("Boy 7")
-    registerPlayer("Girl 8")
-    registerPlayer("Boy 8")
-
-    # The first time we call standings, leave tournament off
-    standings = playerStandings()
-    # since standings is sorted, but every one has a starting score of 0, shuffle for first round random pairings
-    random.shuffle(standings)
-
-    for i in standings:
-        addPlayerToTournament(i[0], t)
-
-    nPlayers = countPlayers(tournament=t)
-
-    #print "There are {0} players competing in the tournament".format(nPlayers)
-
-    round = 0
-    while round < math.log(nPlayers, 2):
-        pairs = swissPairings(t)
-        for p in pairs:
-
-            # randomly choose winner
-            outcome = [0, 2]
-            random.shuffle(outcome)
-            winner = p[outcome[0]]
-            looser = p[outcome[1]]
-
-            # Randomly draw 1% of the time
-            draw = False
-            if random.randint(1, 100) == 1:
-                draw = True
-            reportMatch(winner, looser, draw=draw, tournament=t)
-        round += 1
-
-    print "The Winner is:", playerStandings(tournament=t)[0][1]
-
-    deleteMatches()
-    deleteResults()
-    deleteTournaments()
-    deletePlayers()
-
-if __name__ == '__main__':
-    runTournament()
 
 
 

@@ -10,7 +10,22 @@ vagrant up
 vagrant ssh 
 
 To obtain the same starting dev environment. 
-By default the unomodified starting code of this project will live in the /vagrant/tournament directory of your VM.
+By default the unmodified starting code of this project will live in the /vagrant/tournament directory of your VM.
+
+Use the following commands to set up the db:
+```
+> pqsl
+
+> \i tournament.sql
+
+> \q
+```
+
+The run tournament_test.py to show unit tests, and one example of a tournament
+```
+> python tournament_test.py
+```
+
 
 
 
