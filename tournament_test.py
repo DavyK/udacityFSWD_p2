@@ -2,6 +2,9 @@
 #
 # Test cases for tournament.py
 
+import math
+import random
+
 from tournament import *
 
 
