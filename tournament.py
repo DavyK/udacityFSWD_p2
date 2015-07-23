@@ -2,73 +2,72 @@
 #
 # tournament.py -- implementation of a Swiss-system tournament
 #
-
+from contextlib import contextmanager
 import psycopg2
 import sys
-import math
-import random
-
 
 def connect(dbname="tournaments"):
     """Connect to the PostgreSQL database.  Returns a database connection."""
     return psycopg2.connect("dbname=%s" % dbname)
 
+@contextmanager
+def db_manager():
+    """
+    A context manager for the setup and teardown of the database connections.
+
+    :yield: a cursor object, so all operations within the context manager must be with the cursor.
+    """
+    try:
+        db = connect()
+        cur = db.cursor()
+        yield cur
+    except Exception:
+        db.rollback()
+        raise
+    else:
+        db.commit()
+    finally:
+        db.close()
+
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    db = connect()
-    c = db.cursor()
-    c.execute('DELETE FROM matches')
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        c.execute('DELETE FROM matches')
+
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    db = connect()
-    c = db.cursor()
-    c.execute('DELETE FROM players')
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        c.execute('DELETE FROM players')
 
 
 def deleteTournaments():
     """Remove all the tournament records from the database."""
-    db = connect()
-    c = db.cursor()
-    c.execute('DELETE FROM tournaments')
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        c.execute('DELETE FROM tournaments')
 
 
 def deleteEntrants():
     """Remove all the tournament records from the database."""
-    db = connect()
-    c = db.cursor()
-    c.execute('DELETE FROM players_in_tournaments')
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        c.execute('DELETE FROM players_in_tournaments')
 
 
 def countPlayers(tournament=None):
     """Returns the number of players currently registered."""
-    db = connect()
-    c = db.cursor()
-    c.execute('SELECT count(*) from players')
-    result = c.fetchone()
-    db.close()
-
+    with db_manager() as c:
+        c.execute('SELECT count(*) from players')
+        result = c.fetchone()
     return result[0]
 
 
 def countTournaments():
     """Returns the number of tournaments currently registered."""
-    db = connect()
-    c = db.cursor()
-    c.execute('SELECT count(*) from tournaments')
-    result = c.fetchone()
-    db.close()
-
+    with db_manager() as c:
+        c.execute('SELECT count(*) from tournaments')
+        result = c.fetchone()
     return result[0]
 
 
@@ -81,14 +80,12 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    db = connect()
-    c = db.cursor()
-    query = "INSERT INTO players (name) values (%s) RETURNING id"
-    data = (name, )
-    c.execute(query, data)
-    new_player_id = c.fetchone()[0]
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        query = "INSERT INTO players (name) values (%s) RETURNING id"
+        data = (name, )
+        c.execute(query, data)
+        new_player_id = c.fetchone()[0]
+
     return new_player_id
 
 
@@ -107,27 +104,21 @@ def registerTournament(name):
     Note: added as support for multiple tournaments
     """
 
-    db = connect()
-    c = db.cursor()
-    query = "INSERT INTO tournaments (name) values (%s) RETURNING id"
-    data = (name, )
-    c.execute(query, data)
-    new_tournament_id = c.fetchone()[0]
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        query = "INSERT INTO tournaments (name) values (%s) RETURNING id"
+        data = (name, )
+        c.execute(query, data)
+        new_tournament_id = c.fetchone()[0]
 
     return new_tournament_id
 
 
 def addPlayerToTournament(player, tournament):
 
-    db = connect()
-    c = db.cursor()
-    query = "INSERT INTO players_in_tournaments (player_id, tournament_id) values (%s, %s)"
-    data = (player, tournament)
-    c.execute(query, data)
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        query = "INSERT INTO players_in_tournaments (player_id, tournament_id) values (%s, %s)"
+        data = (player, tournament)
+        c.execute(query, data)
 
 
 def playerStandings(tournament):
@@ -147,14 +138,12 @@ def playerStandings(tournament):
         matches: the number of matches the player has played
     """
 
-    db = connect()
-    c = db.cursor()
-    query = """
-        SELECT id, name, num_wins, num_matches FROM standings WHERE tournament_id = %s
-        """
-    c.execute(query, (tournament, ))
-    results = c.fetchall()
-    db.close()
+    with db_manager() as c:
+        query = """
+            SELECT id, name, num_wins, num_matches FROM standings WHERE tournament_id = %s
+            """
+        c.execute(query, (tournament, ))
+        results = c.fetchall()
 
     if len(results) % 2 != 0:
         print """
@@ -172,15 +161,12 @@ def reportMatch(winner, looser, tournament, draw=False):
       player1:  the id number of the player who won
       player2:  the id number of the player who lost
     """
-    db = connect()
-    c = db.cursor()
-    query = """
-    INSERT INTO matches (tournament_id, winner_id, looser_id, draw) VALUES (%s, %s, %s, %s)
-    """
-    data = (tournament, winner, looser, draw)
-    c.execute(query, data)
-    db.commit()
-    db.close()
+    with db_manager() as c:
+        query = """
+        INSERT INTO matches (tournament_id, winner_id, looser_id, draw) VALUES (%s, %s, %s, %s)
+        """
+        data = (tournament, winner, looser, draw)
+        c.execute(query, data)
 
 
 def swissPairings(tournament):
@@ -202,8 +188,6 @@ def swissPairings(tournament):
         id2: the second player's unique id
         name2: the second player's name
     """
-    db = connect()
-    c = db.cursor()
 
     standings = playerStandings(tournament)
     pairings = []
@@ -222,42 +206,44 @@ def swissPairings(tournament):
 
     standings_dict = {p[0]: p for p in standings}
 
-    for player in standings:
-        if player[0] not in set(player_pool):
-            # if this player has already been assigned to a match, skip over them.
-            continue
+    with db_manager() as c:
 
-        elif len(player_pool) == 2:
-            # make match with last 2 players as they are only choice
-            p1 = standings_dict[player_pool[0]]
-            p2 = standings_dict[player_pool[1]]
-            pairings.append((p1[0], p1[1], p2[0], p2[1]))
-            break
-        else:
-            query = """
-                    SELECT id FROM players
-                    WHERE id NOT IN
-                    (
-                        SELECT DISTINCT * FROM
+        for player in standings:
+            if player[0] not in set(player_pool):
+                # if this player has already been assigned to a match, skip over them.
+                continue
+
+            elif len(player_pool) == 2:
+                # make match with last 2 players as they are only choice
+                p1 = standings_dict[player_pool[0]]
+                p2 = standings_dict[player_pool[1]]
+                pairings.append((p1[0], p1[1], p2[0], p2[1]))
+                break
+            else:
+                query = """
+                        SELECT id FROM players
+                        WHERE id NOT IN
                         (
-                            SELECT looser_id FROM matches WHERE winner_id = %s AND tournament_id = %s
-                            UNION
-                            SELECT winner_id FROM matches WHERE looser_id = %s  AND tournament_id = %s
-                        ) AS Q1
-                    ) AND id != %s
-                    """
-            c.execute(query, (player[0], tournament, player[0], tournament, player[0]))
+                            SELECT DISTINCT * FROM
+                            (
+                                SELECT looser_id FROM matches WHERE winner_id = %s AND tournament_id = %s
+                                UNION
+                                SELECT winner_id FROM matches WHERE looser_id = %s  AND tournament_id = %s
+                            ) AS Q1
+                        ) AND id != %s
+                        """
+                c.execute(query, (player[0], tournament, player[0], tournament, player[0]))
 
-            # intersection off opponents not yet played against and opponents not yet assigned to a match
-            eligible_opponents = set([r[0] for r in c.fetchall()]).intersection(set(player_pool))
+                # intersection off opponents not yet played against and opponents not yet assigned to a match
+                eligible_opponents = set([r[0] for r in c.fetchall()]).intersection(set(player_pool))
 
-            for o in standings:
-                if o[0] in eligible_opponents:
-                    pairings.append((player[0], player[1], o[0], o[1]))
-                    del player_pool[player_pool.index(player[0])]
-                    del player_pool[player_pool.index(o[0])]
-                    break
-    db.close()
+                for o in standings:
+                    if o[0] in eligible_opponents:
+                        pairings.append((player[0], player[1], o[0], o[1]))
+                        del player_pool[player_pool.index(player[0])]
+                        del player_pool[player_pool.index(o[0])]
+                        break
+
     if len(pairings) == 0:
         print 'No more unique matches for this tournament exist!'
         sys.exit(1)
