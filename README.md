@@ -57,11 +57,11 @@ This function will update the matches table accordingly.
 tournament_test.py
 ------------------
 This module contains some basic unit tests and a function runTournament() that shows how to:
-1) clear the database tables
-2) register tournament and players
-3) enter players into tournments
-4) pair players and randomly determine winner and/or a draw
-5) continue for the appropriate number of rounds based on the number of players ( log2(n) )
+1. clear the database tables
+2. register tournament and players
+3. enter players into tournments
+4. pair players and randomly determine winner and/or a draw
+5. continue for the appropriate number of rounds based on the number of players ( log2(n) )
 
 The run tournament_test.py to show unit tests, and one example of a tournament
 ```
