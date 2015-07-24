@@ -1,6 +1,14 @@
 # udacityFSWD_p2
 udacity full stack web dev project 2
 
+Tournament.py is intended to allow a user to interact with a Postgres database designed to
+keep track of a swiss style tournament (https://en.wikipedia.org/wiki/Swiss-system_tournament).
+the database can accept multiple tournaments, and tracks player standings within tournament only.
+The standings are computed by the number of wins and the ties are broken by number of OMWs (Opponent Match Wins).
+Currently an odd number of players is not supported, and rematches between the same opponent is allowed,
+but only if there was no better pairing (based on wins and OMWs.
+
+
 Requirments:
 Virtual Box 4.3.28
 Vagrant
@@ -32,7 +40,7 @@ tournament.py
     playerStandings() a function that takes as an argument the id number of the tournament to get the standings for.
     It returns a list of all players entered IN THAT TOURNAMENT sorted in decreasing order by their current scores,
     with ties broken by the sum of the number of wins
-    of all previous opponents (OMW - Opponent Match Wins).
+    of all previous opponents (OMW).
 
     swissPairings() returns all players entered in the requested tournament, paired by scores, and if possible, also by having
     never played each other before. I.E winners will be paired with winners, and losers with losers. Note that before the first
