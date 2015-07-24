@@ -30,13 +30,13 @@ By default the unmodified starting code of this project will live in the /vagran
 Setup:
 ------
 Use the following commands to set up the db:
-```
-> pqsl
 
-> \i tournament.sql
+    > pqsl
 
-> \q
-```
+    > \i tournament.sql
+
+    > \q
+
 tournament.py
 -------------
 tournament.py contains functions for interacting with the database - deleting and registering
@@ -57,31 +57,36 @@ This function will update the matches table accordingly.
 tournament_test.py
 ------------------
 This module contains some basic unit tests and a function runTournament() that shows how to:
+
 1. clear the database tables
+
 2. register tournament and players
-3. enter players into tournments
+
+3. enter players into tournaments
+
 4. pair players and randomly determine winner and/or a draw
+
 5. continue for the appropriate number of rounds based on the number of players ( log2(n) )
 
 The run tournament_test.py to show unit tests, and one example of a tournament
-```
-> python tournament_test.py
-    1. Old matches can be deleted.
-    2. Player records can be deleted.
-    3. After deleting, countPlayers() returns zero.
-    4. After registering a player, countPlayers() returns 1.
-    5. Players can be registered and deleted.
-    1a. Tournaments can be deleted.
-    4a. After registering a tournament, countTournaments() returns 1.
-    5a. Tournaments can be registered and deleted.
-    6. Newly registered players appear in the standings with no matches.
-    7. After a match, players have updated standings.
-    8. After one match, players with one win are paired.
-    Success! All tests pass!
-    There are 16 players
-    After 4 rounds....
-    The Winner is Boy 2 with 4 points
-```
+
+    > python tournament_test.py
+        1. Old matches can be deleted.
+        2. Player records can be deleted.
+        3. After deleting, countPlayers() returns zero.
+        4. After registering a player, countPlayers() returns 1.
+        5. Players can be registered and deleted.
+        1a. Tournaments can be deleted.
+        4a. After registering a tournament, countTournaments() returns 1.
+        5a. Tournaments can be registered and deleted.
+        6. Newly registered players appear in the standings with no matches.
+        7. After a match, players have updated standings.
+        8. After one match, players with one win are paired.
+        Success! All tests pass!
+        There are 16 players
+        After 4 rounds....
+        The Winner is Boy 2 with 4 points
+
 
 
 
