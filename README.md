@@ -10,6 +10,7 @@ but only if there was no better pairing (based on wins and OMWs.
 
 
 Requirments:
+------------
 Virtual Box 4.3.28
 Vagrant
 Python 2.7+
@@ -26,6 +27,8 @@ To obtain the same starting dev environment.
 By default the unmodified starting code of this project will live in the /vagrant/tournament directory of your VM.
 
 
+Setup:
+------
 Use the following commands to set up the db:
 ```
 > pqsl
@@ -35,22 +38,24 @@ Use the following commands to set up the db:
 > \q
 ```
 tournament.py
-    tournament.py contains functions for interacting with the database - deleting and registering
-    players, and tournaments, and players to tournaments.
-    playerStandings() a function that takes as an argument the id number of the tournament to get the standings for.
-    It returns a list of all players entered IN THAT TOURNAMENT sorted in decreasing order by their current scores,
-    with ties broken by the sum of the number of wins
-    of all previous opponents (OMW).
+-------------
+tournament.py contains functions for interacting with the database - deleting and registering
+players, and tournaments, and players to tournaments.
+playerStandings() a function that takes as an argument the id number of the tournament to get the standings for.
+It returns a list of all players entered IN THAT TOURNAMENT sorted in decreasing order by their current scores,
+with ties broken by the sum of the number of wins
+of all previous opponents (OMW).
 
-    swissPairings returns all players entered in the requested tournament, paired by scores, and if possible, also by having
-    never played each other before. I.E winners will be paired with winners, and losers with losers. Note that before the first
-    round is played as all players will have a score of 0. This is why random.shuffle is used so that pairs will not be simply the
-    order in which they were inserted into the DB tables.
+swissPairings returns all players entered in the requested tournament, paired by scores, and if possible, also by having
+never played each other before. I.E winners will be paired with winners, and losers with losers. Note that before the first
+round is played as all players will have a score of 0. This is why random.shuffle is used so that pairs will not be simply the
+order in which they were inserted into the DB tables.
 
-    reportMatch takes the winner and loser of match in that order, and optionally a draw argument that signifies that there was a draw.
-    This function will update the matches table accordingly.
+reportMatch takes the winner and loser of match in that order, and optionally a draw argument that signifies that there was a draw.
+This function will update the matches table accordingly.
 
 tournament_test.py
+------------------
     This module contains some basic unit tests and a function runTournament() that shows how to:
         1) clear the database tables
         2) register tournament and players
