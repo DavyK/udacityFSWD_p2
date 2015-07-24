@@ -42,12 +42,12 @@ tournament.py
     with ties broken by the sum of the number of wins
     of all previous opponents (OMW).
 
-    swissPairings() returns all players entered in the requested tournament, paired by scores, and if possible, also by having
+    swissPairings returns all players entered in the requested tournament, paired by scores, and if possible, also by having
     never played each other before. I.E winners will be paired with winners, and losers with losers. Note that before the first
     round is played as all players will have a score of 0. This is why random.shuffle is used so that pairs will not be simply the
     order in which they were inserted into the DB tables.
 
-    reportMatch() takes the winner and loser of match in that order, and optionally a draw argument that signifies that there was a draw.
+    reportMatch takes the winner and loser of match in that order, and optionally a draw argument that signifies that there was a draw.
     This function will update the matches table accordingly.
 
 tournament_test.py
